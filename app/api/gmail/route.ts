@@ -24,9 +24,11 @@ export async function GET() {
                 });
 
         const emailData = await emailList.json();
+        console.log(emailData)
+        console.log(emailData.length)
 
-        if (emailData.length === 0){ // check if there any emails
-
+        if (emailData.messages){ // check if there any emails
+            console.log("emails found")
             const emailIDS = emailData.messages.map((email : any) => email.id);            
 
             const allEmails = await Promise.all(
@@ -53,6 +55,7 @@ export async function GET() {
             return NextResponse.json(allEmails);
 
         } else {
+            console.log("no emails")
             return NextResponse.json([])
         }
     }

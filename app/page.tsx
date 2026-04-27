@@ -15,8 +15,12 @@ async function getEvents(){
       }
     });
 
-    const data = await res.json();
-    return data;
+    if (!res.ok){
+      return [];
+    } else {
+      const data = await res.json();
+      return data;
+    }
 }
 
 async function getEmails() {
@@ -32,8 +36,12 @@ async function getEmails() {
       }
     });
 
-    const data = await res.json();
-    return data;
+    if (!res.ok){ //unauth error
+      return [];
+    } else{
+      const data = await res.json();
+      return data;
+    }
 }
 
 export default async function Home() {
