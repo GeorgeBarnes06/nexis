@@ -11,10 +11,10 @@ export async function GET() {
 
         const calList = await fetch( // get all calendars 
         "https://www.googleapis.com/calendar/v3/users/me/calendarList",
-        {
-            headers: {
-                Authorization: `Bearer ${session.accessToken}`,
-            },
+            {
+                headers: {
+                    Authorization: `Bearer ${session.accessToken}`,
+                },
         });
 
         const calData = await calList.json();
