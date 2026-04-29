@@ -33,10 +33,12 @@ export async function GET() {
                 )   
             
                 const data = await res.json();
-                return data;
+                return data.items ?? [];
             })
         )
+        
+        const tasks = allTasks.flat();
 
-        return NextResponse.json(allTasks)
+        return NextResponse.json(tasks)
     }
 }

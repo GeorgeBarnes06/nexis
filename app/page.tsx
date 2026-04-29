@@ -1,5 +1,7 @@
 import Image from "next/image";
 import { cookies } from "next/headers";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 
 async function getEvents(){
@@ -44,13 +46,42 @@ async function getEmails() {
     }
 }
 
+async function getTasks() {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.getAll()
+    .map(c => `${c.name}=${c.value}`)
+    .join("; ");
+  
+    const res = await fetch("http://localhost:3000/api/tasks", {
+      cache: "no-store", 
+      headers: {
+        Cookie: cookieHeader,
+      }
+    });
+
+    if (!res.ok){ //unauth error
+      return [];
+    } else{
+      const data = await res.json();
+      return data;
+    }
+    
+}
+
+
+
 export default async function Home() {
   const events = await getEvents();
   const emails = await getEmails();
-  console.log(emails)
+  const tasks = await getTasks();
+  const session = await getServerSession(authOptions);
+  if (!session) return 
+  <main>
+    <p>Please sign in</p>
+  </main>;
   return (
     <main className="bg-[#1414140d]">
-      <p className="text-lg flex justify-center">Hello George</p>
+      <p className="text-lg flex justify-center">Hello {session.user?.name}</p>
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-[#ffffff]" >
           <div className="flex flex-col outline aspect-square p-4 overflow-y-auto">
@@ -100,9 +131,23 @@ export default async function Home() {
           </div>
         </div>
 
-
-        <div className="card3">
-          <p className="flex items-center justify-center outline aspect-square">Card 3</p>
+        <div className="bg-[#ffffff]">
+          <div className="flex flex-col outline aspect-square p-4 overflow-y-auto">
+            <p className="font-bold mb-2">Tasks</p>
+            <ul className="space-y-2">
+              {tasks.length === 0 
+                ? <p className="text-xs text-gray-500">No tasks</p>
+                : tasks.map((task: any) => (
+                  <li key={task.id} className="border-b pb-2">
+                    <p className="font-semibold text-sm">{task.title}</p>
+                    <p className="text-xs text-gray-500">
+                      {task.status === "needsAction" ? "To do" : "Completed"}
+                    </p>
+                  </li>
+                ))
+              }
+            </ul>
+          </div>
         </div>
       </div>
     </main>
