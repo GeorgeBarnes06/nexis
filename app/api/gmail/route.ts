@@ -10,7 +10,6 @@ export async function GET() {
     } else {
 
         const today = new Date();
-        console.log(`after:${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`)
         const emailList = await fetch(
             "https://gmail.googleapis.com/gmail/v1/users/me/messages?" +
                 new URLSearchParams({
@@ -24,11 +23,8 @@ export async function GET() {
                 });
 
         const emailData = await emailList.json();
-        console.log(emailData)
-        console.log(emailData.length)
 
-        if (emailData.messages){ // check if there any emails
-            console.log("emails found")
+        if (emailData.messages) { // check if there any emails
             const emailIDS = emailData.messages.map((email : any) => email.id);            
 
             const allEmails = await Promise.all(
@@ -50,12 +46,9 @@ export async function GET() {
                 return data;
                 })
             )
-
-            console.log(allEmails);
             return NextResponse.json(allEmails);
 
-        } else {
-            console.log("no emails")
+        } else { //no emails - empty inbox for today
             return NextResponse.json([])
         }
     }
