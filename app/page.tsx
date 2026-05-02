@@ -75,10 +75,15 @@ export default async function Home() {
   const emails = await getEmails();
   const tasks = await getTasks();
   const session = await getServerSession(authOptions);
-  if (!session) return 
-  <main>
-    <p>Please sign in</p>
-  </main>;
+  if (!session) {
+    return (
+      <main className="flex items-center justify-center h-screen">
+        <a href="/api/auth/signin" className= "text-black px-4 py-2 rounded">
+          Sign in with Google
+        </a>
+      </main>
+    );
+  }
   return (
     <main className="bg-[#1414140d]">
       <p className="text-lg flex justify-center">Hello {session.user?.name}</p>
@@ -136,7 +141,7 @@ export default async function Home() {
             <p className="font-bold mb-2">Tasks</p>
             <ul className="space-y-2">
               {tasks.length === 0 
-                ? <p className="text-xs text-gray-500">No tasks</p>
+                ?  <p className="text-xs text-gray-500">No tasks</p>
                 : tasks.map((task: any) => (
                   <li key={task.id} className="border-b pb-2">
                     <p className="font-semibold text-sm">{task.title}</p>
