@@ -62,3 +62,34 @@ export async function GET() {
         return NextResponse.json(events);
     }
 }
+
+export async function POST(req: Request) {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    } else {
+
+        const body = await req.json();
+        const calendarId = body.calendarId ?? "primary";
+
+        const res = await fetch(
+            "https://www.googleapis.com/calendar/v3/calendars/" + encodeURIComponent(calendarId) + "/events",
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${session.accessToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    summary: body.summary,
+                    start: body.start,
+                    end: body.end,
+                }),
+            }
+        );
+
+        const data = await res.json();
+        return NextResponse.json(data, { status: res.status });
+    }
+}
