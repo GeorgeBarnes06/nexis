@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+nlu/nexis-nlu/
+nlu/__pycache__/
+nlu/**/__pycache__/
+*.pyc
+nlu/model.pt
+nlu/processed_dataset.json
