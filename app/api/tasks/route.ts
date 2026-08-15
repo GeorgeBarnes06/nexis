@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 
 export async function GET() {
     const session = await getServerSession(authOptions);
@@ -42,5 +41,36 @@ export async function GET() {
         const tasks = allTasks.flat();
 
         return NextResponse.json(tasks)
+    }
+}
+
+export async function POST(req: Request) {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    } else {
+
+        const body = await req.json();
+        const taskListId = body.taskListId ?? "@default";
+
+        const res = await fetch(
+            "https://tasks.googleapis.com/tasks/v1/lists/" + taskListId + "/tasks",
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${session.accessToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    title: body.title,
+                    notes: body.notes,
+                    due: body.due,
+                }),
+            }
+        );
+
+        const data = await res.json();
+        return NextResponse.json(data, { status: res.status });
     }
 }

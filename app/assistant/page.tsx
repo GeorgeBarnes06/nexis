@@ -7,12 +7,15 @@ type Message = {
     role: "user" | "assistant";
     text: string;
     action?: any;
+    confirmed?: boolean;
+    success?: boolean;
 };
 
 export default function AssistantPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
+    const [confirmingIndex, setConfirmingIndex] = useState<number | null>(null);
 
     async function handleSend(e: React.FormEvent) {
         e.preventDefault();
@@ -35,8 +38,8 @@ export default function AssistantPage() {
         setLoading(false);
     }
 
-    async function handleConfirm(action: any) {
-        setLoading(true);
+    async function handleConfirm(action: any, index: number) {
+        setConfirmingIndex(index);
 
         const res = await fetch("/api/assistant", {
             method: "POST",
@@ -46,12 +49,28 @@ export default function AssistantPage() {
 
         const data = await res.json();
 
-        setMessages((prev) => [...prev, { role: "assistant", text: data.reply }]);
-        setLoading(false);
+        setMessages((prev) =>
+            prev.map((msg, i) => (i === index ? { ...msg, confirmed: true } : msg))
+        );
+        setMessages((prev) => [
+            ...prev,
+            { role: "assistant", text: data.reply, success: data.ok },
+        ]);
+        setConfirmingIndex(null);
     }
 
-    function handleCancel() {
+    function handleCancel(index: number) {
+        setMessages((prev) =>
+            prev.map((msg, i) => (i === index ? { ...msg, confirmed: true } : msg))
+        );
         setMessages((prev) => [...prev, { role: "assistant", text: "Okay, cancelled." }]);
+    }
+
+    function actionLabel(type: string) {
+        if (type === "add_event") return "New event";
+        if (type === "add_task") return "New task";
+        if (type === "complete_task") return "Mark as done";
+        return "Action";
     }
 
     return (
@@ -65,16 +84,21 @@ export default function AssistantPage() {
                             className={`max-w-md px-4 py-2 rounded ${
                                 msg.role === "user"
                                     ? "bg-gray-900 text-white ml-auto"
+                                    : msg.success === true
+                                    ? "bg-green-100 text-green-900 border border-green-400"
+                                    : msg.success === false
+                                    ? "bg-red-100 text-red-900 border border-red-400"
                                     : "bg-gray-200 text-gray-900"
                             }`}
                         >
+                            {msg.success === true && "✓ "}
                             {msg.text}
                         </div>
 
-                        {msg.action && (
+                        {msg.action && !msg.confirmed && (
                             <div className="max-w-2xl border rounded p-3 mt-2 bg-white">
                                 <p className="text-sm font-semibold">
-                                    {msg.action.type === "add_event" ? "New event" : "New task"}
+                                    {actionLabel(msg.action.type)}
                                 </p>
                                 <p className="text-sm">{msg.action.title}</p>
                                 {msg.action.datetime && (
@@ -91,14 +115,16 @@ export default function AssistantPage() {
 
                                 <div className="flex gap-2 mt-2">
                                     <button
-                                        onClick={() => handleConfirm(msg.action)}
-                                        className="text-xs bg-gray-900 text-white px-3 py-1 rounded"
+                                        onClick={() => handleConfirm(msg.action, i)}
+                                        disabled={confirmingIndex === i}
+                                        className="text-xs bg-gray-900 text-white px-3 py-1 rounded disabled:opacity-50"
                                     >
-                                        Confirm
+                                        {confirmingIndex === i ? "Adding..." : "Confirm"}
                                     </button>
                                     <button
-                                        onClick={handleCancel}
-                                        className="text-xs bg-gray-200 px-3 py-1 rounded"
+                                        onClick={() => handleCancel(i)}
+                                        disabled={confirmingIndex === i}
+                                        className="text-xs bg-gray-200 px-3 py-1 rounded disabled:opacity-50"
                                     >
                                         Cancel
                                     </button>

@@ -3,6 +3,28 @@ import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import * as chrono from "chrono-node";
 
+function findBestTaskMatch(spokenTitle: string, tasks: any[]) {
+    const spokenWords = spokenTitle.toLowerCase().split(/\s+/).filter(Boolean);
+
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const task of tasks) {
+        if (task.status !== "needsAction") continue;
+
+        const taskWords = task.title.toLowerCase().split(/\s+/).filter(Boolean);
+        const overlap = spokenWords.filter((w: string) => taskWords.includes(w)).length;
+        const score = overlap / Math.max(spokenWords.length, taskWords.length);
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = task;
+        }
+    }
+
+    return bestScore >= 0.3 ? bestMatch : null;
+}
+
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
 
@@ -11,9 +33,10 @@ export async function POST(req: Request) {
     } else {
 
         const body = await req.json();
+        const cookie = req.headers.get("cookie") ?? "";
 
         if (body.confirmedAction) {
-            return executeAction(body.confirmedAction, req);
+            return executeAction(body.confirmedAction, cookie);
         }
 
         const text = body.text;
@@ -46,15 +69,42 @@ export async function POST(req: Request) {
                 },
             });
 
+        } else if (intent === "complete_task") {
+            if (!title) {
+                return NextResponse.json({
+                    reply: "Which task did you want to mark as done?",
+                    action: null,
+                });
+            }
+
+            const tasksRes = await fetch("http://localhost:3000/api/tasks", {
+                headers: { Cookie: cookie },
+                cache: "no-store",
+            });
+
+            const tasks = await tasksRes.json();
+            const match = findBestTaskMatch(title, tasks);
+
+            if (!match) {
+                return NextResponse.json({
+                    reply: `I couldn't find an open task matching "${title}".`,
+                    action: null,
+                });
+            }
+
+            return NextResponse.json({
+                reply: `Here's what I'll mark as done — check it looks right:`,
+                action: {
+                    type: "complete_task",
+                    title: match.title,
+                    taskId: match.id,
+                    taskListId: match.taskListId,
+                },
+            });
+
         } else if (intent === "list_today") {
             return NextResponse.json({
                 reply: "Check the Home page for today's events and tasks.",
-                action: null,
-            });
-
-        } else if (intent === "complete_task") {
-            return NextResponse.json({
-                reply: `I understood you want to mark "${title}" as done, but I don't have a way to look up which task that is yet — try the Tasks page for now.`,
                 action: null,
             });
 
@@ -67,9 +117,7 @@ export async function POST(req: Request) {
     }
 }
 
-async function executeAction(action: any, req: Request) {
-    const cookie = req.headers.get("cookie") ?? "";
-
+async function executeAction(action: any, cookie: string) {
     if (action.type === "add_event") {
         const startDate = new Date(action.datetime);
         const endDate = new Date(startDate.getTime() + 30 * 60000);
@@ -85,11 +133,14 @@ async function executeAction(action: any, req: Request) {
         });
 
         if (!createRes.ok) {
-            return NextResponse.json({ reply: "Something went wrong creating that event." });
+            const errorBody = await createRes.text();
+            console.error("calendar create failed:", createRes.status, errorBody);
+            return NextResponse.json({ reply: "Something went wrong creating that event.", ok: false });
         }
 
         return NextResponse.json({
             reply: `Added "${action.title}" to your calendar.`,
+            ok: true,
         });
 
     } else if (action.type === "add_task") {
@@ -103,13 +154,36 @@ async function executeAction(action: any, req: Request) {
         });
 
         if (!createRes.ok) {
-            return NextResponse.json({ reply: "Something went wrong adding that task." });
+            const errorBody = await createRes.text();
+            console.error("task create failed:", createRes.status, errorBody);
+            return NextResponse.json({ reply: "Something went wrong adding that task.", ok: false });
         }
 
         return NextResponse.json({
             reply: `Added "${action.title}" to your tasks.`,
+            ok: true,
+        });
+
+    } else if (action.type === "complete_task") {
+        const patchRes = await fetch(`http://localhost:3000/api/tasks/${action.taskId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Cookie: cookie },
+            body: JSON.stringify({
+                taskListId: action.taskListId,
+            }),
+        });
+
+        if (!patchRes.ok) {
+            const errorBody = await patchRes.text();
+            console.error("task complete failed:", patchRes.status, errorBody);
+            return NextResponse.json({ reply: "Something went wrong marking that task done.", ok: false });
+        }
+
+        return NextResponse.json({
+            reply: `Marked "${action.title}" as done.`,
+            ok: true,
         });
     }
 
-    return NextResponse.json({ reply: "Unknown action type." });
+    return NextResponse.json({ reply: "Unknown action type.", ok: false });
 }

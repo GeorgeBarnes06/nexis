@@ -9,6 +9,7 @@ titles = [
     "review pull request", "renew passport", "pick up groceries", "call mum",
     "submit assignment", "water the plants", "fix the bike", "read chapter 5",
     "book a haircut", "send invoice", "backup files", "plan the trip",
+    "footy", "gym", "yoga class", "team meeting", "dinner with friends",
 ]
 
 dates = [
@@ -29,6 +30,8 @@ add_event_templates = [
     "create an event for {title} {date}",
     "i have {title} {date}",
     "plan {title} {date}",
+    "add {title} to calendar {date}",
+    "add {title} to my calendar {date}",
 ]
 
 add_task_templates = [
