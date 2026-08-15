@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CalendarWeekPreview from "@/components/CalendarWeekPreview";
 
 type Message = {
     role: "user" | "assistant";
@@ -71,7 +72,7 @@ export default function AssistantPage() {
                         </div>
 
                         {msg.action && (
-                            <div className="max-w-md border rounded p-3 mt-2 bg-white">
+                            <div className="max-w-2xl border rounded p-3 mt-2 bg-white">
                                 <p className="text-sm font-semibold">
                                     {msg.action.type === "add_event" ? "New event" : "New task"}
                                 </p>
@@ -81,6 +82,13 @@ export default function AssistantPage() {
                                         {new Date(msg.action.datetime).toLocaleString("en-GB")}
                                     </p>
                                 )}
+
+                                {msg.action.type === "add_event" && (
+                                    <CalendarWeekPreview
+                                        pendingEvent={{ title: msg.action.title, datetime: msg.action.datetime }}
+                                    />
+                                )}
+
                                 <div className="flex gap-2 mt-2">
                                     <button
                                         onClick={() => handleConfirm(msg.action)}
