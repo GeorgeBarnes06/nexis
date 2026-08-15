@@ -5,7 +5,8 @@ import { headers } from "next/headers";
 
 export async function GET() {
     const session = await getServerSession(authOptions);
-        if (!session) {
+
+    if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     } else {
 
@@ -27,16 +28,17 @@ export async function GET() {
                     "https://tasks.googleapis.com/tasks/v1/lists/" + taskListId + "/tasks",
                     {
                         headers: {
-                            authorization: `Bearer ${session.accessToken}`,
+                            Authorization: `Bearer ${session.accessToken}`,
                         }
                     }
-                )   
-            
+                )
+
                 const data = await res.json();
-                return data.items ?? [];
+                const items = data.items ?? [];
+                return items.map((item: any) => ({ ...item, taskListId }));
             })
         )
-        
+
         const tasks = allTasks.flat();
 
         return NextResponse.json(tasks)

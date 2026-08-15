@@ -19,7 +19,7 @@ export default function Sidebar() {
         <div
             onMouseEnter={() => setExpanded(true)}
             onMouseLeave={() => setExpanded(false)}
-            className={`h-screen bg-[#1a1a1a] text-white flex flex-col py-4 transition-all duration-200 ${
+            className={`h-screen bg-gray-900 text-gray-100 flex flex-col py-4 transition-all duration-200 ${
                 expanded ? "w-48" : "w-16"
             }`}
         >
@@ -29,9 +29,9 @@ export default function Sidebar() {
                     <Link
                         key={link.href}
                         href={link.href}
-                        className="flex items-center gap-3 px-5 py-3 hover:bg-[#2a2a2a] whitespace-nowrap overflow-hidden"
+                        className="flex items-center gap-3 px-5 py-3 text-gray-100 hover:bg-gray-800 hover:text-white whitespace-nowrap overflow-hidden"
                     >
-                        <Icon size={20} className="shrink-0" />
+                        <Icon size={20} className="shrink-0 text-gray-100" />
                         {expanded && <span>{link.label}</span>}
                     </Link>
                 );
