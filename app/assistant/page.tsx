@@ -77,6 +77,7 @@ export default function AssistantPage() {
 
     function actionLabel(type: string) {
         if (type === "add_event") return "New event";
+        if (type === "update_event") return "Move event";
         if (type === "add_task") return "New task";
         if (type === "complete_task") return "Mark as done";
         return "Action";
@@ -135,40 +136,64 @@ export default function AssistantPage() {
                             </div>
                         )}
 
-                        {msg.action && !msg.confirmed && (
+                        {msg.action && (
                             <div className="max-w-2xl border rounded p-3 mt-2 bg-white">
                                 <p className="text-sm font-semibold">
                                     {actionLabel(msg.action.type)}
                                 </p>
                                 <p className="text-sm">{msg.action.title}</p>
-                                {msg.action.datetime && (
-                                    <p className="text-xs text-gray-500">
-                                        {new Date(msg.action.datetime).toLocaleString("en-GB")}
-                                    </p>
+
+                                {msg.action.type === "update_event" ? (
+                                    <div className="text-xs text-gray-600 mt-1 space-y-0.5">
+                                        <p>
+                                            <span className="text-gray-400">From:</span>{" "}
+                                            {new Date(msg.action.oldDatetime).toLocaleString("en-GB")}
+                                        </p>
+                                        <p>
+                                            <span className="text-gray-400">To:</span>{" "}
+                                            {new Date(msg.action.newDatetime).toLocaleString("en-GB")}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    msg.action.datetime && (
+                                        <p className="text-xs text-gray-500">
+                                            {new Date(msg.action.datetime).toLocaleString("en-GB")}
+                                        </p>
+                                    )
                                 )}
 
                                 {msg.action.type === "add_event" && (
                                     <CalendarWeekPreview
                                         pendingEvent={{ title: msg.action.title, datetime: msg.action.datetime }}
+                                        confirmed={msg.confirmed}
                                     />
                                 )}
 
-                                <div className="flex gap-2 mt-2">
-                                    <button
-                                        onClick={() => handleConfirm(msg.action, i)}
-                                        disabled={confirmingIndex === i}
-                                        className="text-xs bg-gray-900 text-white px-3 py-1 rounded disabled:opacity-50"
-                                    >
-                                        {confirmingIndex === i ? "Adding..." : "Confirm"}
-                                    </button>
-                                    <button
-                                        onClick={() => handleCancel(i)}
-                                        disabled={confirmingIndex === i}
-                                        className="text-xs bg-gray-200 px-3 py-1 rounded disabled:opacity-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
+                                {msg.action.type === "update_event" && (
+                                    <CalendarWeekPreview
+                                        pendingEvent={{ title: msg.action.title, datetime: msg.action.newDatetime }}
+                                        confirmed={msg.confirmed}
+                                    />
+                                )}
+
+                                {!msg.confirmed && (
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            onClick={() => handleConfirm(msg.action, i)}
+                                            disabled={confirmingIndex === i}
+                                            className="text-xs bg-gray-900 text-white px-3 py-1 rounded disabled:opacity-50"
+                                        >
+                                            {confirmingIndex === i ? "Saving..." : "Confirm"}
+                                        </button>
+                                        <button
+                                            onClick={() => handleCancel(i)}
+                                            disabled={confirmingIndex === i}
+                                            className="text-xs bg-gray-200 px-3 py-1 rounded disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

@@ -25,6 +25,28 @@ function findBestTaskMatch(spokenTitle: string, tasks: any[]) {
     return bestScore >= 0.3 ? bestMatch : null;
 }
 
+function findBestEventMatch(spokenTitle: string, events: any[]) {
+    const spokenWords = spokenTitle.toLowerCase().split(/\s+/).filter(Boolean);
+
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const event of events) {
+        if (!event.summary) continue;
+
+        const eventWords = event.summary.toLowerCase().split(/\s+/).filter(Boolean);
+        const overlap = spokenWords.filter((w: string) => eventWords.includes(w)).length;
+        const score = overlap / Math.max(spokenWords.length, eventWords.length);
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = event;
+        }
+    }
+
+    return bestScore >= 0.3 ? bestMatch : null;
+}
+
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
 
@@ -51,7 +73,7 @@ export async function POST(req: Request) {
         const { intent, title, date_text } = parsed;
 
         if (intent === "add_event" || intent === "add_task") {
-            const parsedDate = date_text ? chrono.parseDate(date_text) : null;
+            const parsedDate = date_text ? chrono.parseDate(date_text, new Date(), { forwardDate: true }) : null;
 
             if (intent === "add_event" && !parsedDate) {
                 return NextResponse.json({
@@ -66,6 +88,55 @@ export async function POST(req: Request) {
                     type: intent,
                     title: title ?? "Untitled",
                     datetime: parsedDate ? parsedDate.toISOString() : null,
+                },
+            });
+
+        } else if (intent === "update_event") {
+            if (!title) {
+                return NextResponse.json({
+                    reply: "Which event did you want to move?",
+                    action: null,
+                });
+            }
+
+            const parsedDate = date_text ? chrono.parseDate(date_text) : null;
+
+            if (!parsedDate) {
+                return NextResponse.json({
+                    reply: "I couldn't figure out the new time. Try again with a clearer time.",
+                    action: null,
+                });
+            }
+
+            const eventsRes = await fetch("http://localhost:3000/api/calendar/events", {
+                headers: { Cookie: cookie },
+                cache: "no-store",
+            });
+
+            const events = await eventsRes.json();
+            const match = findBestEventMatch(title, events);
+
+            if (!match) {
+                return NextResponse.json({
+                    reply: `I couldn't find an event matching "${title}".`,
+                    action: null,
+                });
+            }
+
+            const oldStart = match.start?.dateTime ?? match.start?.date;
+            const oldEnd = match.end?.dateTime ?? match.end?.date;
+            const durationMs = new Date(oldEnd).getTime() - new Date(oldStart).getTime();
+            const newEnd = new Date(parsedDate.getTime() + durationMs);
+
+            return NextResponse.json({
+                reply: `Here's the change — check it looks right:`,
+                action: {
+                    type: "update_event",
+                    title: match.summary,
+                    eventId: match.id,
+                    oldDatetime: oldStart,
+                    newDatetime: parsedDate.toISOString(),
+                    newEndDatetime: newEnd.toISOString(),
                 },
             });
 
@@ -176,6 +247,27 @@ async function executeAction(action: any, cookie: string) {
 
         return NextResponse.json({
             reply: `Added "${action.title}" to your calendar.`,
+            ok: true,
+        });
+
+    } else if (action.type === "update_event") {
+        const patchRes = await fetch(`http://localhost:3000/api/calendar/events/${action.eventId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Cookie: cookie },
+            body: JSON.stringify({
+                start: { dateTime: action.newDatetime },
+                end: { dateTime: action.newEndDatetime },
+            }),
+        });
+
+        if (!patchRes.ok) {
+            const errorBody = await patchRes.text();
+            console.error("event update failed:", patchRes.status, errorBody);
+            return NextResponse.json({ reply: "Something went wrong moving that event.", ok: false });
+        }
+
+        return NextResponse.json({
+            reply: `Moved "${action.title}" to its new time.`,
             ok: true,
         });
 

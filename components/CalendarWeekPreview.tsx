@@ -18,7 +18,13 @@ const START_HOUR = 6;
 const END_HOUR = 23;
 const HOUR_HEIGHT = 48;
 
-export default function CalendarWeekPreview({ pendingEvent }: { pendingEvent: PendingEvent }) {
+export default function CalendarWeekPreview({
+    pendingEvent,
+    confirmed = false,
+}: {
+    pendingEvent: PendingEvent;
+    confirmed?: boolean;
+}) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -37,7 +43,7 @@ export default function CalendarWeekPreview({ pendingEvent }: { pendingEvent: Pe
                 setEvents(data);
                 setLoading(false);
             });
-    }, [pendingEvent.datetime]);
+    }, [pendingEvent.datetime, confirmed]);
 
     if (loading) {
         return <p className="text-xs text-gray-500 mt-2">Loading week...</p>;
@@ -58,12 +64,16 @@ export default function CalendarWeekPreview({ pendingEvent }: { pendingEvent: Pe
             end: new Date(e.end?.dateTime ?? e.end?.date ?? ""),
             isNew: false,
         })),
-        {
-            title: pendingEvent.title,
-            start: pendingStart,
-            end: pendingEnd,
-            isNew: true,
-        },
+        ...(confirmed
+            ? []
+            : [
+                {
+                    title: pendingEvent.title,
+                    start: pendingStart,
+                    end: pendingEnd,
+                    isNew: true,
+                },
+            ]),
     ];
 
     const hours: number[] = [];
