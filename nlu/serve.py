@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from transformers import AutoModel, AutoTokenizer
 from fastapi import FastAPI
 from pydantic import BaseModel
+from embedding_fallback import classify_by_similarity
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -13,6 +15,8 @@ intent2id = checkpoint["intent2id"]
 slot2id = checkpoint["slot2id"]
 id2intent = {v: k for k, v in intent2id.items()}
 id2slot = {v: k for k, v in slot2id.items()}
+
+CONFIDENCE_THRESHOLD = 0.6
 
 class IntentSlotModel(nn.Module):
     def __init__(self, num_intents, num_slots):
@@ -56,8 +60,18 @@ def predict(text):
     with torch.no_grad():
         intent_logits, slot_logits = model(input_ids, attention_mask)
 
-    intent_pred = torch.argmax(intent_logits, dim=1).item()
+    intent_probs = F.softmax(intent_logits, dim=1)[0]
+    intent_pred = torch.argmax(intent_probs).item()
+    intent_confidence = intent_probs[intent_pred].item()
     intent = id2intent[intent_pred]
+
+    used_fallback = False
+
+    if intent_confidence < CONFIDENCE_THRESHOLD:
+        fallback_intent, fallback_score = classify_by_similarity(text)
+        if fallback_intent is not None:
+            intent = fallback_intent
+            used_fallback = True
 
     slot_preds = torch.argmax(slot_logits, dim=2)[0].tolist()
 
@@ -73,6 +87,8 @@ def predict(text):
         "intent": intent,
         "title": " ".join(title_words) if title_words else None,
         "date_text": " ".join(date_words) if date_words else None,
+        "confidence": intent_confidence,
+        "used_fallback": used_fallback,
     }
 
 app = FastAPI()

@@ -10,6 +10,7 @@ titles = [
     "submit assignment", "water the plants", "fix the bike", "read chapter 5",
     "book a haircut", "send invoice", "backup files", "plan the trip",
     "footy", "gym", "yoga class", "team meeting", "dinner with friends",
+    "dentist appointment", "doctor appointment", "job interview",
 ]
 
 dates = [
@@ -32,6 +33,17 @@ add_event_templates = [
     "plan {title} {date}",
     "add {title} to calendar {date}",
     "add {title} to my calendar {date}",
+    "i've got {title} {date}",
+    "i have an appointment for {title} {date}",
+]
+
+update_event_templates = [
+    "move {title} to {date}",
+    "reschedule {title} to {date}",
+    "change {title} to {date}",
+    "push {title} back to {date}",
+    "shift {title} to {date}",
+    "move {title} to {date} instead",
 ]
 
 add_task_templates = [
@@ -112,6 +124,11 @@ def generate():
         for title in titles:
             for date in random.sample(dates, 3):
                 examples.append(build_example(template, "add_event", title, date))
+
+    for template in update_event_templates:
+        for title in titles:
+            for date in random.sample(dates, 3):
+                examples.append(build_example(template, "update_event", title, date))
 
     for template in add_task_templates:
         for title in titles:
