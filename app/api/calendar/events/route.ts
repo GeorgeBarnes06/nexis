@@ -2,14 +2,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    } else {    
+    } else {
 
-        const calList = await fetch( // get all calendars 
+        const calList = await fetch(
         "https://www.googleapis.com/calendar/v3/users/me/calendarList",
             {
                 headers: {
@@ -18,16 +18,24 @@ export async function GET() {
         });
 
         const calData = await calList.json();
-        const calIds: string[] = calData.items.map((cal : any) => cal.id); // get the ids of all the calendars
+        const calIds: string[] = calData.items.map((cal : any) => cal.id);
 
-        const today = new Date(); //date handling logic, want to get monday 00:00 and sunday 23:59 of the week the day is in
-        const dayOfWeek = today.getDay(); // 1 monday , 2 tuesday ... , 0 sunday
+        const { searchParams } = new URL(req.url);
+        const weekStartParam = searchParams.get("weekStart");
 
-        const monday = new Date(today);
-        monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+        let monday: Date;
+
+        if (weekStartParam) {
+            monday = new Date(weekStartParam);
+        } else {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            monday = new Date(today);
+            monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+        }
         monday.setHours(0, 0);
 
-        const sunday = new Date(today);
+        const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
         sunday.setHours(23, 59);
 

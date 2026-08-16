@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import CalendarWeekPreview from "@/components/CalendarWeekPreview";
 
 type Message = {
@@ -9,6 +9,7 @@ type Message = {
     action?: any;
     confirmed?: boolean;
     success?: boolean;
+    summary?: any;
 };
 
 export default function AssistantPage() {
@@ -16,6 +17,11 @@ export default function AssistantPage() {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [confirmingIndex, setConfirmingIndex] = useState<number | null>(null);
+    const bottomRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages, loading]);
 
     async function handleSend(e: React.FormEvent) {
         e.preventDefault();
@@ -34,7 +40,10 @@ export default function AssistantPage() {
 
         const data = await res.json();
 
-        setMessages((prev) => [...prev, { role: "assistant", text: data.reply, action: data.action }]);
+        setMessages((prev) => [
+            ...prev,
+            { role: "assistant", text: data.reply, action: data.action, summary: data.summary },
+        ]);
         setLoading(false);
     }
 
@@ -95,6 +104,37 @@ export default function AssistantPage() {
                             {msg.text}
                         </div>
 
+                        {msg.summary && (
+                            <div className="max-w-md border rounded p-3 mt-2 bg-white space-y-3">
+                                {msg.summary.events.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-500 mb-1">Events</p>
+                                        {msg.summary.events.map((e: any, idx: number) => (
+                                            <p key={idx} className="text-sm">
+                                                {e.time
+                                                    ? new Date(e.time).toLocaleTimeString("en-GB", {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })
+                                                    : "All day"}{" "}
+                                                — {e.title}
+                                            </p>
+                                        ))}
+                                    </div>
+                                )}
+                                {msg.summary.tasks.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-500 mb-1">Open tasks</p>
+                                        {msg.summary.tasks.map((t: any, idx: number) => (
+                                            <p key={idx} className="text-sm">
+                                                {t.title}
+                                            </p>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {msg.action && !msg.confirmed && (
                             <div className="max-w-2xl border rounded p-3 mt-2 bg-white">
                                 <p className="text-sm font-semibold">
@@ -138,6 +178,7 @@ export default function AssistantPage() {
                         Thinking...
                     </div>
                 )}
+                <div ref={bottomRef} />
             </div>
 
             <form onSubmit={handleSend} className="flex gap-2">

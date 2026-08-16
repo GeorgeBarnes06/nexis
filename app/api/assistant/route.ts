@@ -103,9 +103,45 @@ export async function POST(req: Request) {
             });
 
         } else if (intent === "list_today") {
+            const [eventsRes, tasksRes] = await Promise.all([
+                fetch("http://localhost:3000/api/calendar/events", {
+                    headers: { Cookie: cookie },
+                    cache: "no-store",
+                }),
+                fetch("http://localhost:3000/api/tasks", {
+                    headers: { Cookie: cookie },
+                    cache: "no-store",
+                }),
+            ]);
+
+            const allEvents = await eventsRes.json();
+            const allTasks = await tasksRes.json();
+
+            const now = new Date();
+            const todayEvents = allEvents.filter((e: any) => {
+                const dateStr = e.start?.dateTime ?? e.start?.date;
+                return dateStr && new Date(dateStr).toDateString() === now.toDateString();
+            });
+
+            const openTasks = allTasks.filter((t: any) => t.status === "needsAction");
+
+            if (todayEvents.length === 0 && openTasks.length === 0) {
+                return NextResponse.json({
+                    reply: "Nothing scheduled today, and no open tasks.",
+                    action: null,
+                });
+            }
+
             return NextResponse.json({
-                reply: "Check the Home page for today's events and tasks.",
+                reply: "Here's today:",
                 action: null,
+                summary: {
+                    events: todayEvents.map((e: any) => ({
+                        title: e.summary,
+                        time: e.start?.dateTime ?? null,
+                    })),
+                    tasks: openTasks.map((t: any) => ({ title: t.title })),
+                },
             });
 
         } else {

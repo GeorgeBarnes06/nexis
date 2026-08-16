@@ -22,14 +22,22 @@ export default function CalendarWeekPreview({ pendingEvent }: { pendingEvent: Pe
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const pendingStart = new Date(pendingEvent.datetime);
+    const pendingEnd = new Date(pendingStart.getTime() + 30 * 60000);
+
+    const anchorDayOfWeek = pendingStart.getDay();
+    const monday = new Date(pendingStart);
+    monday.setDate(pendingStart.getDate() - ((anchorDayOfWeek + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+
     useEffect(() => {
-        fetch("/api/calendar/events")
+        fetch(`/api/calendar/events?weekStart=${monday.toISOString()}`)
             .then((res) => res.json())
             .then((data) => {
                 setEvents(data);
                 setLoading(false);
             });
-    }, []);
+    }, [pendingEvent.datetime]);
 
     if (loading) {
         return <p className="text-xs text-gray-500 mt-2">Loading week...</p>;
@@ -37,20 +45,11 @@ export default function CalendarWeekPreview({ pendingEvent }: { pendingEvent: Pe
 
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
-    monday.setHours(0, 0, 0, 0);
-
     const dayColumns = days.map((label, i) => {
         const date = new Date(monday);
         date.setDate(monday.getDate() + i);
         return { label, date };
     });
-
-    const pendingStart = new Date(pendingEvent.datetime);
-    const pendingEnd = new Date(pendingStart.getTime() + 30 * 60000);
 
     const allItems = [
         ...events.map((e) => ({
@@ -84,67 +83,71 @@ export default function CalendarWeekPreview({ pendingEvent }: { pendingEvent: Pe
 
     return (
         <div className="border rounded mt-2 bg-white overflow-hidden">
-            <p className="text-xs font-semibold text-gray-500 p-2 border-b">This week</p>
+            <p className="text-xs font-semibold text-gray-500 p-2 border-b">
+                Week of {monday.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+            </p>
 
-            <div className="flex">
-                <div className="w-12 shrink-0">
-                    <div className="h-8 border-b" />
-                    {hours.map((h) => (
-                        <div
-                            key={h}
-                            className="text-xs text-gray-400 text-right pr-1 border-b"
-                            style={{ height: HOUR_HEIGHT }}
-                        >
-                            {h}:00
-                        </div>
-                    ))}
-                </div>
-
-                <div className="flex-1 grid grid-cols-7 overflow-x-auto">
-                    {dayColumns.map((col) => {
-                        const dayItems = allItems.filter(
-                            (item) => item.start.toDateString() === col.date.toDateString()
-                        );
-
-                        return (
-                            <div key={col.label} className="border-l relative">
-                                <div className="h-8 border-b text-center text-xs py-1">
-                                    <p className="font-semibold text-gray-600">{col.label}</p>
-                                    <p className="text-gray-400">{col.date.getDate()}</p>
-                                </div>
-
-                                <div
-                                    className="relative"
-                                    style={{ height: (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT }}
-                                >
-                                    {hours.map((h) => (
-                                        <div
-                                            key={h}
-                                            className="border-b"
-                                            style={{ height: HOUR_HEIGHT }}
-                                        />
-                                    ))}
-
-                                    {dayItems.map((item, i) => (
-                                        <div
-                                            key={i}
-                                            className={`absolute left-0.5 right-0.5 rounded px-1 text-[10px] overflow-hidden ${
-                                                item.isNew
-                                                    ? "bg-blue-100 border border-blue-500 text-blue-900 font-semibold z-20"
-                                                    : "bg-gray-100 border border-gray-100 text-gray-700 z-10"
-                                            }`}
-                                            style={{
-                                                top: getTopOffset(item.start),
-                                                height: getHeight(item.start, item.end),
-                                            }}
-                                        >
-                                            {item.title}
-                                        </div>
-                                    ))}
-                                </div>
+            <div className="max-h-80 overflow-y-auto">
+                <div className="flex">
+                    <div className="w-12 shrink-0 sticky left-0 bg-white z-30">
+                        <div className="h-10 border-b sticky top-0 bg-white z-30" />
+                        {hours.map((h) => (
+                            <div
+                                key={h}
+                                className="text-xs text-gray-400 text-right pr-1 border-b flex items-start justify-end"
+                                style={{ height: HOUR_HEIGHT }}
+                            >
+                                {h}:00
                             </div>
-                        );
-                    })}
+                        ))}
+                    </div>
+
+                    <div className="flex-1 grid grid-cols-7">
+                        {dayColumns.map((col) => {
+                            const dayItems = allItems.filter(
+                                (item) => item.start.toDateString() === col.date.toDateString()
+                            );
+
+                            return (
+                                <div key={col.label} className="border-l relative">
+                                    <div className="h-10 border-b text-center text-xs py-0.5 sticky top-0 bg-white z-20 leading-tight">
+                                        <p className="font-semibold text-gray-600">{col.label}</p>
+                                        <p className="text-gray-400">{col.date.getDate()}</p>
+                                    </div>
+
+                                    <div
+                                        className="relative"
+                                        style={{ height: (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT }}
+                                    >
+                                        {hours.map((h) => (
+                                            <div
+                                                key={h}
+                                                className="border-b"
+                                                style={{ height: HOUR_HEIGHT }}
+                                            />
+                                        ))}
+
+                                        {dayItems.map((item, i) => (
+                                            <div
+                                                key={i}
+                                                className={`absolute left-0.5 right-0.5 rounded px-1 text-[10px] overflow-hidden flex items-center justify-center text-center ${
+                                                    item.isNew
+                                                        ? "bg-blue-100 border border-blue-500 text-blue-900 font-semibold z-20"
+                                                        : "bg-gray-100 border border-gray-100 text-gray-700 z-10"
+                                                }`}
+                                                style={{
+                                                    top: getTopOffset(item.start),
+                                                    height: getHeight(item.start, item.end),
+                                                }}
+                                            >
+                                                {item.title}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>
