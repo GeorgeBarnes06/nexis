@@ -22,22 +22,37 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url);
         const weekStartParam = searchParams.get("weekStart");
+        const daysParam = searchParams.get("days");
 
-        let monday: Date;
+        let timeMin: Date;
+        let timeMax: Date;
 
-        if (weekStartParam) {
-            monday = new Date(weekStartParam);
+        if (daysParam) {
+            timeMin = new Date();
+            timeMin.setHours(0, 0, 0, 0);
+            timeMin.setDate(timeMin.getDate() - 7);
+
+            timeMax = new Date();
+            timeMax.setDate(timeMax.getDate() + parseInt(daysParam, 10));
+            timeMax.setHours(23, 59);
         } else {
-            const today = new Date();
-            const dayOfWeek = today.getDay();
-            monday = new Date(today);
-            monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
-        }
-        monday.setHours(0, 0);
+            let monday: Date;
 
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59);
+            if (weekStartParam) {
+                monday = new Date(weekStartParam);
+            } else {
+                const today = new Date();
+                const dayOfWeek = today.getDay();
+                monday = new Date(today);
+                monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+            }
+            monday.setHours(0, 0);
+
+            timeMin = monday;
+            timeMax = new Date(monday);
+            timeMax.setDate(monday.getDate() + 6);
+            timeMax.setHours(23, 59);
+        }
 
         const allEvents = await Promise.all(
             calIds.map(async (calId) => {
@@ -46,8 +61,8 @@ export async function GET(req: Request) {
                         new URLSearchParams({
                             orderBy: "startTime",
                             singleEvents: "true",
-                            timeMin: monday.toISOString(),
-                            timeMax: sunday.toISOString(),
+                            timeMin: timeMin.toISOString(),
+                            timeMax: timeMax.toISOString(),
                         }),
                         {
                             headers: {

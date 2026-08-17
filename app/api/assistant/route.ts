@@ -99,7 +99,7 @@ export async function POST(req: Request) {
                 });
             }
 
-            const parsedDate = date_text ? chrono.parseDate(date_text) : null;
+            const parsedDate = date_text ? chrono.parseDate(date_text, new Date(), { forwardDate: true }) : null;
 
             if (!parsedDate) {
                 return NextResponse.json({
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
                 });
             }
 
-            const eventsRes = await fetch("http://localhost:3000/api/calendar/events", {
+            const eventsRes = await fetch("http://localhost:3000/api/calendar/events?days=60", {
                 headers: { Cookie: cookie },
                 cache: "no-store",
             });
