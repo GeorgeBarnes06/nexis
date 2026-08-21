@@ -66,6 +66,21 @@ add_task_templates = [
     "remember to {title} {date}",
 ]
 
+delete_event_templates = [
+    "delete {title}",
+    "remove {title} from my calendar",
+    "cancel {title}",
+    "cancel the {title} event",
+    "get rid of {title}",
+]
+
+delete_task_templates = [
+    "delete the task {title}",
+    "remove {title} from my todo list",
+    "delete {title} task",
+    "get rid of the {title} task",
+]
+
 complete_task_templates = [
     "mark {title} as done",
     "complete {title}",

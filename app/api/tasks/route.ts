@@ -74,3 +74,32 @@ export async function POST(req: Request) {
         return NextResponse.json(data, { status: res.status });
     }
 }
+
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    } else {
+
+        const { searchParams } = new URL(req.url);
+        const taskListId = searchParams.get("taskListId") ?? "@default";
+
+        const res = await fetch(
+            "https://tasks.googleapis.com/tasks/v1/lists/" + taskListId + "/tasks/" + params.id,
+            {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${session.accessToken}`,
+                },
+            }
+        );
+
+        if (res.status === 204) {
+            return NextResponse.json({ success: true });
+        }
+
+        const data = await res.json().catch(() => ({}));
+        return NextResponse.json(data, { status: res.status });
+    }
+}
