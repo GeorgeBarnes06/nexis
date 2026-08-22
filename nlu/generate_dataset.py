@@ -223,6 +223,14 @@ def generate():
             "intent": "unknown",
         })
 
+    for template in delete_event_templates:
+        for title in titles:
+            examples.append(build_example(template, "delete_event", title, ""))
+
+    for template in delete_task_templates:
+        for title in titles:
+            examples.append(build_example(template, "delete_task", title, ""))
+            
     random.shuffle(examples)
     return examples
 

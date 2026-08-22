@@ -83,6 +83,8 @@ def predict(text):
     title_words = [words[i] for i in range(len(words)) if word_tags.get(i, "O") in ("B-TITLE", "I-TITLE")]
     date_words = [words[i] for i in range(len(words)) if word_tags.get(i, "O") in ("B-DATE", "I-DATE")]
 
+    print(f"text={text!r} intent={intent} confidence={intent_confidence:.3f} used_fallback={used_fallback}")
+
     return {
         "intent": intent,
         "title": " ".join(title_words) if title_words else None,
