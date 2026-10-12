@@ -1,5 +1,4 @@
-TEST
-	line# Nexis
+# Nexis
 
 **A personal productivity dashboard with a self-built natural-language assistant.**
 
