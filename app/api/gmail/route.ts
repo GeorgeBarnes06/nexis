@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
+import type { GmailMessageRef } from "@/types/google";
 
 export async function GET() {
     const session = await getServerSession(authOptions);
@@ -25,10 +25,10 @@ export async function GET() {
         const emailData = await emailList.json();
 
         if (emailData.messages) { // check if there any emails
-            const emailIDS = emailData.messages.map((email : any) => email.id);            
+            const emailIDS = emailData.messages.map((email: GmailMessageRef) => email.id);            
 
             const allEmails = await Promise.all(
-                emailIDS.map(async (emailId: any) => {
+                emailIDS.map(async (emailId: string) => {
                     const res = await fetch(
                         "https://gmail.googleapis.com/gmail/v1/users/me/messages/" + emailId + "?" + 
                             new URLSearchParams([

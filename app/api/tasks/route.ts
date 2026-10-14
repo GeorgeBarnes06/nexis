@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import type { TaskList } from "@/types/google";
 
 export async function GET() {
     const session = await getServerSession(authOptions);
@@ -19,7 +20,7 @@ export async function GET() {
         )
 
         const taskListData = await taskList.json();
-        const taskListIds: string[] = taskListData.items.map((taskId : any) => taskId.id);
+        const taskListIds: string[] = taskListData.items.map((list: TaskList) => list.id);
 
         const allTasks = await Promise.all(
             taskListIds.map(async (taskListId) => {
@@ -34,7 +35,7 @@ export async function GET() {
 
                 const data = await res.json();
                 const items = data.items ?? [];
-                return items.map((item: any) => ({ ...item, taskListId }));
+                return items.map((item: object) => ({ ...item, taskListId }));
             })
         )
 
@@ -71,35 +72,6 @@ export async function POST(req: Request) {
         );
 
         const data = await res.json();
-        return NextResponse.json(data, { status: res.status });
-    }
-}
-
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    } else {
-
-        const { searchParams } = new URL(req.url);
-        const taskListId = searchParams.get("taskListId") ?? "@default";
-
-        const res = await fetch(
-            "https://tasks.googleapis.com/tasks/v1/lists/" + taskListId + "/tasks/" + params.id,
-            {
-                method: "DELETE",
-                headers: {
-                    Authorization: `Bearer ${session.accessToken}`,
-                },
-            }
-        );
-
-        if (res.status === 204) {
-            return NextResponse.json({ success: true });
-        }
-
-        const data = await res.json().catch(() => ({}));
         return NextResponse.json(data, { status: res.status });
     }
 }

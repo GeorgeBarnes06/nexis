@@ -2,11 +2,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import * as chrono from "chrono-node";
+import { APP_URL, NLU_URL } from "@/lib/config";
+import type { CalendarEvent, Task } from "@/types/google";
+import type { AssistantAction } from "@/types/assistant";
 
-function findBestTaskMatch(spokenTitle: string, tasks: any[]) {
+function findBestTaskMatch(spokenTitle: string, tasks: Task[]) {
 	const spokenWords = spokenTitle.toLowerCase().split(/\s+/).filter(Boolean);
 
-	let bestMatch = null;
+	let bestMatch: Task | null = null;
 	let bestScore = 0;
 
 	for (const task of tasks) {
@@ -25,10 +28,10 @@ function findBestTaskMatch(spokenTitle: string, tasks: any[]) {
 	return bestScore >= 0.3 ? bestMatch : null;
 }
 
-function findBestEventMatch(spokenTitle: string, events: any[]) {
+function findBestEventMatch(spokenTitle: string, events: CalendarEvent[]) {
 	const spokenWords = spokenTitle.toLowerCase().split(/\s+/).filter(Boolean);
 
-	let bestMatch = null;
+	let bestMatch: CalendarEvent | null = null;
 	let bestScore = 0;
 
 	for (const event of events) {
@@ -63,7 +66,7 @@ export async function POST(req: Request) {
 
 		const text = body.text;
 
-		const parseRes = await fetch("http://localhost:8000/parse", {
+		const parseRes = await fetch(`${NLU_URL}/parse`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ text }),
@@ -108,12 +111,12 @@ export async function POST(req: Request) {
 				});
 			}
 
-			const eventsRes = await fetch("http://localhost:3000/api/calendar/events?days=60", {
+			const eventsRes = await fetch(`${APP_URL}/api/calendar/events?days=60`, {
 				headers: { Cookie: cookie },
 				cache: "no-store",
 			});
 
-			const events = await eventsRes.json();
+			const events: CalendarEvent[] = await eventsRes.json();
 			const match = findBestEventMatch(title, events);
 
 			if (!match) {
@@ -125,7 +128,9 @@ export async function POST(req: Request) {
 
 			const oldStart = match.start?.dateTime ?? match.start?.date;
 			const oldEnd = match.end?.dateTime ?? match.end?.date;
-			const durationMs = new Date(oldEnd).getTime() - new Date(oldStart).getTime();
+			const durationMs = oldStart && oldEnd
+				? new Date(oldEnd).getTime() - new Date(oldStart).getTime()
+				: 30 * 60000;
 			const newEnd = new Date(parsedDate.getTime() + durationMs);
 
 			return NextResponse.json({
@@ -148,12 +153,12 @@ export async function POST(req: Request) {
 				});
 			}
 
-			const tasksRes = await fetch("http://localhost:3000/api/tasks", {
+			const tasksRes = await fetch(`${APP_URL}/api/tasks`, {
 				headers: { Cookie: cookie },
 				cache: "no-store",
 			});
 
-			const tasks = await tasksRes.json();
+			const tasks: Task[] = await tasksRes.json();
 			const match = findBestTaskMatch(title, tasks);
 
 			if (!match) {
@@ -181,12 +186,12 @@ export async function POST(req: Request) {
 				});
 			}
 
-			const tasksRes = await fetch("http://localhost:3000/api/tasks", {
+			const tasksRes = await fetch(`${APP_URL}/api/tasks`, {
 				headers: { Cookie: cookie },
 				cache: "no-store",
 			});
 
-			const tasks = await tasksRes.json();
+			const tasks: Task[] = await tasksRes.json();
 			const match = findBestTaskMatch(title, tasks);
 
 			if (!match) {
@@ -214,12 +219,12 @@ export async function POST(req: Request) {
 				});
 			}
 
-			const eventsRes = await fetch("http://localhost:3000/api/calendar/events?days=60", {
+			const eventsRes = await fetch(`${APP_URL}/api/calendar/events?days=60`, {
 				headers: { Cookie: cookie },
 				cache: "no-store",
 			});
 
-			const events = await eventsRes.json();
+			const events: CalendarEvent[] = await eventsRes.json();
 			const match = findBestEventMatch(title, events);
 
 			if (!match) {
@@ -240,26 +245,26 @@ export async function POST(req: Request) {
 
 		} else if (intent === "list_today") {
 			const [eventsRes, tasksRes] = await Promise.all([
-				fetch("http://localhost:3000/api/calendar/events", {
+				fetch(`${APP_URL}/api/calendar/events`, {
 					headers: { Cookie: cookie },
 					cache: "no-store",
 				}),
-				fetch("http://localhost:3000/api/tasks", {
+				fetch(`${APP_URL}/api/tasks`, {
 					headers: { Cookie: cookie },
 					cache: "no-store",
 				}),
 			]);
 
-			const allEvents = await eventsRes.json();
-			const allTasks = await tasksRes.json();
+			const allEvents: CalendarEvent[] = await eventsRes.json();
+			const allTasks: Task[] = await tasksRes.json();
 
 			const now = new Date();
-			const todayEvents = allEvents.filter((e: any) => {
+			const todayEvents = allEvents.filter((e) => {
 				const dateStr = e.start?.dateTime ?? e.start?.date;
 				return dateStr && new Date(dateStr).toDateString() === now.toDateString();
 			});
 
-			const openTasks = allTasks.filter((t: any) => t.status === "needsAction");
+			const openTasks = allTasks.filter((t) => t.status === "needsAction");
 
 			if (todayEvents.length === 0 && openTasks.length === 0) {
 				return NextResponse.json({
@@ -272,11 +277,11 @@ export async function POST(req: Request) {
 				reply: "Here's today:",
 				action: null,
 				summary: {
-					events: todayEvents.map((e: any) => ({
+					events: todayEvents.map((e) => ({
 						title: e.summary,
 						time: e.start?.dateTime ?? null,
 					})),
-					tasks: openTasks.map((t: any) => ({ title: t.title })),
+					tasks: openTasks.map((t) => ({ title: t.title })),
 				},
 			});
 
@@ -289,12 +294,12 @@ export async function POST(req: Request) {
 	}
 }
 
-async function executeAction(action: any, cookie: string) {
+async function executeAction(action: AssistantAction, cookie: string) {
 	if (action.type === "add_event") {
 		const startDate = new Date(action.datetime);
 		const endDate = new Date(startDate.getTime() + 30 * 60000);
 
-		const createRes = await fetch("http://localhost:3000/api/calendar/events", {
+		const createRes = await fetch(`${APP_URL}/api/calendar/events`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", Cookie: cookie },
 			body: JSON.stringify({
@@ -316,7 +321,7 @@ async function executeAction(action: any, cookie: string) {
 		});
 
 	} else if (action.type === "update_event") {
-		const patchRes = await fetch(`http://localhost:3000/api/calendar/events/${action.eventId}`, {
+		const patchRes = await fetch(`${APP_URL}/api/calendar/events/${action.eventId}`, {
 			method: "PATCH",
 			headers: { "Content-Type": "application/json", Cookie: cookie },
 			body: JSON.stringify({
@@ -337,7 +342,7 @@ async function executeAction(action: any, cookie: string) {
 		});
 
 	} else if (action.type === "add_task") {
-		const createRes = await fetch("http://localhost:3000/api/tasks", {
+		const createRes = await fetch(`${APP_URL}/api/tasks`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", Cookie: cookie },
 			body: JSON.stringify({
@@ -358,7 +363,7 @@ async function executeAction(action: any, cookie: string) {
 		});
 
 	} else if (action.type === "complete_task") {
-		const patchRes = await fetch(`http://localhost:3000/api/tasks/${action.taskId}`, {
+		const patchRes = await fetch(`${APP_URL}/api/tasks/${action.taskId}`, {
 			method: "PATCH",
 			headers: { "Content-Type": "application/json", Cookie: cookie },
 			body: JSON.stringify({
@@ -378,7 +383,7 @@ async function executeAction(action: any, cookie: string) {
 		});
 
 	} else if (action.type === "delete_task") {
-		const deleteRes = await fetch(`http://localhost:3000/api/tasks/${action.taskId}`, {
+		const deleteRes = await fetch(`${APP_URL}/api/tasks/${action.taskId}`, {
 			method: "DELETE",
 			headers: { "Content-Type": "application/json", Cookie: cookie },
 			body: JSON.stringify({
@@ -398,7 +403,7 @@ async function executeAction(action: any, cookie: string) {
 		});
 
 	} else if (action.type === "delete_event") {
-		const deleteRes = await fetch(`http://localhost:3000/api/calendar/events/${action.eventId}`, {
+		const deleteRes = await fetch(`${APP_URL}/api/calendar/events/${action.eventId}`, {
 			method: "DELETE",
 			headers: { "Content-Type": "application/json", Cookie: cookie },
 		});

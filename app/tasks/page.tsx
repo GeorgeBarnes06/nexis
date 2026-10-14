@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { APP_URL } from "@/lib/config";
+import type { Task } from "@/types/google";
 import CreateTaskForm from "@/components/CreateTaskForm";
 import CompleteTaskButton from "@/components/CompleteTaskButton";
 
@@ -10,7 +12,7 @@ async function getTasks() {
         .map(c => `${c.name}=${c.value}`)
         .join("; ");
 
-    const res = await fetch("http://localhost:3000/api/tasks", {
+    const res = await fetch(`${APP_URL}/api/tasks`, {
         cache: "no-store",
         headers: {
             Cookie: cookieHeader,
@@ -47,7 +49,7 @@ export default async function TasksPage() {
                 {tasks.length === 0 ? (
                     <p className="text-sm text-gray-500">No tasks</p>
                 ) : (
-                    tasks.map((task: any) => (
+                    tasks.map((task: Task) => (
                         <li key={task.id} className="flex items-center justify-between border-b pb-2">
                             <div>
                                 <p className="font-semibold text-sm">{task.title}</p>

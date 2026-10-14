@@ -1,6 +1,9 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { APP_URL } from "@/lib/config";
+import type { CalendarEvent, Task } from "@/types/google";
 
 async function getEvents() {
     const cookieStore = await cookies();
@@ -8,7 +11,7 @@ async function getEvents() {
         .map(c => `${c.name}=${c.value}`)
         .join("; ");
 
-    const res = await fetch("http://localhost:3000/api/calendar/events", {
+    const res = await fetch(`${APP_URL}/api/calendar/events`, {
         cache: "no-store",
         headers: {
             Cookie: cookieHeader,
@@ -29,7 +32,7 @@ async function getTasks() {
         .map(c => `${c.name}=${c.value}`)
         .join("; ");
 
-    const res = await fetch("http://localhost:3000/api/tasks", {
+    const res = await fetch(`${APP_URL}/api/tasks`, {
         cache: "no-store",
         headers: {
             Cookie: cookieHeader,
@@ -56,9 +59,9 @@ export default async function Home() {
     if (!session) {
         return (
             <main className="flex items-center justify-center h-screen">
-                <a href="/api/auth/signin" className="text-black px-4 py-2 rounded">
+                <Link href="/api/auth/signin" className="text-black px-4 py-2 rounded">
                     Sign in with Google
-                </a>
+                </Link>
             </main>
         );
     }
@@ -66,13 +69,13 @@ export default async function Home() {
     const allEvents = await getEvents();
     const allTasks = await getTasks();
 
-    const todayEvents = allEvents.filter((event: any) => {
+    const todayEvents = allEvents.filter((event: CalendarEvent) => {
         const dateStr = event.start?.dateTime ?? event.start?.date;
         return dateStr && isToday(dateStr);
     });
 
     const openTasks = allTasks
-        .filter((task: any) => task.status === "needsAction")
+        .filter((task: Task) => task.status === "needsAction")
         .slice(0, 5);
 
     return (
@@ -86,7 +89,7 @@ export default async function Home() {
                         <p className="text-xs text-gray-500">Nothing scheduled today</p>
                     ) : (
                         <ul className="space-y-2">
-                            {todayEvents.map((event: any) => (
+                            {todayEvents.map((event: CalendarEvent) => (
                                 <li key={event.id} className="border-b pb-2">
                                     <p className="font-semibold text-sm">{event.summary}</p>
                                     <p className="text-xs text-gray-500">
@@ -109,7 +112,7 @@ export default async function Home() {
                         <p className="text-xs text-gray-500">No open tasks</p>
                     ) : (
                         <ul className="space-y-2">
-                            {openTasks.map((task: any) => (
+                            {openTasks.map((task: Task) => (
                                 <li key={task.id} className="border-b pb-2">
                                     <p className="font-semibold text-sm">{task.title}</p>
                                 </li>

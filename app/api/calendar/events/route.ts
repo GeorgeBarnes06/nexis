@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import type { CalendarEvent, CalendarListEntry } from "@/types/google";
 
 export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
         });
 
         const calData = await calList.json();
-        const calIds: string[] = calData.items.map((cal : any) => cal.id);
+        const calIds: string[] = calData.items.map((cal: CalendarListEntry) => cal.id);
 
         const { searchParams } = new URL(req.url);
         const weekStartParam = searchParams.get("weekStart");
@@ -71,15 +72,15 @@ export async function GET(req: Request) {
                         }
                 )
                 const data = await res.json();
-                return data.items ?? [];
+                return (data.items ?? []) as CalendarEvent[];
             })
         )
         const events = allEvents
             .flat()
-            .sort((a: any, b: any) => {
+            .sort((a, b) => {
                 const aTime = a.start?.dateTime ?? a.start?.date;
                 const bTime = b.start?.dateTime ?? b.start?.date;
-                return new Date(aTime).getTime() - new Date(bTime).getTime();
+                return new Date(aTime ?? 0).getTime() - new Date(bTime ?? 0).getTime();
             });
 
         return NextResponse.json(events);

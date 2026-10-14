@@ -113,21 +113,23 @@ GET  /health  → { "status": "ok" }
 ## Getting started
 
 ### Prerequisites
-- Node.js 20+ and pnpm
+- Node.js 20+ and npm
 - Python 3.10+ (CUDA GPU optional but recommended for training)
 - A Google Cloud project with the **Calendar**, **Tasks** and **Gmail** APIs enabled and an OAuth 2.0 client (redirect URI `http://localhost:3000/api/auth/callback/google`)
 
 ### 1. Web app
 ```bash
-pnpm install
+npm install
+cp .env.example .env.local
 ```
 
-Create `.env.local` in the project root:
+Then fill in `.env.local`:
 ```env
 GOOGLE_CLIENT_ID=your-client-id
 GOOGLE_CLIENT_SECRET=your-client-secret
 NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=any-long-random-string
+NEXTAUTH_SECRET=any-long-random-string   # e.g. openssl rand -base64 32
+NLU_URL=http://localhost:8000
 ```
 
 ### 2. NLU service
@@ -135,7 +137,7 @@ NEXTAUTH_SECRET=any-long-random-string
 cd nlu
 python -m venv nexis-nlu
 source nexis-nlu/bin/activate        # Windows: nexis-nlu\Scripts\activate
-pip install torch transformers fastapi uvicorn numpy
+pip install -r requirements.txt
 
 # build the dataset and train the model (creates model.pt)
 python generate_dataset.py
@@ -150,7 +152,7 @@ python train.py
 uvicorn serve:app --reload --port 8000
 
 # terminal 2, in the project root
-pnpm dev
+npm run dev
 ```
 
 Open http://localhost:3000, sign in with Google and try the **Assistant** page.
@@ -169,6 +171,8 @@ app/
   assistant/ calendar/ tasks/   Pages
 components/           Sidebar, forms, confirm buttons, CalendarWeekPreview
 lib/auth.ts           NextAuth config + token refresh
+lib/config.ts         App and NLU service URLs (from env)
+types/                Google API and assistant action types
 nlu/                  Dataset generation, training, inference and FastAPI service
 ```
 

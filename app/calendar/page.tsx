@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { APP_URL } from "@/lib/config";
+import type { CalendarEvent } from "@/types/google";
 import CreateEventForm from "@/components/CreateEventForm";
 
 async function getEvents() {
@@ -9,7 +11,7 @@ async function getEvents() {
         .map(c => `${c.name}=${c.value}`)
         .join("; ");
 
-    const res = await fetch("http://localhost:3000/api/calendar/events", {
+    const res = await fetch(`${APP_URL}/api/calendar/events`, {
         cache: "no-store",
         headers: {
             Cookie: cookieHeader,
@@ -43,7 +45,7 @@ export default async function CalendarPage() {
             <CreateEventForm />
 
             <ul className="space-y-2 mt-6">
-                {events.map((event: any) => (
+                {events.map((event: CalendarEvent) => (
                     <li key={event.id} className="border-b pb-2">
                         <p className="font-semibold text-sm">{event.summary}</p>
                         <p className="text-xs text-gray-500">

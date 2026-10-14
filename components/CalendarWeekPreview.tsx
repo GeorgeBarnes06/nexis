@@ -35,15 +35,16 @@ export default function CalendarWeekPreview({
     const monday = new Date(pendingStart);
     monday.setDate(pendingStart.getDate() - ((anchorDayOfWeek + 6) % 7));
     monday.setHours(0, 0, 0, 0);
+    const weekStart = monday.toISOString();
 
     useEffect(() => {
-        fetch(`/api/calendar/events?weekStart=${monday.toISOString()}`)
+        fetch(`/api/calendar/events?weekStart=${weekStart}`)
             .then((res) => res.json())
             .then((data) => {
                 setEvents(data);
                 setLoading(false);
             });
-    }, [pendingEvent.datetime, confirmed]);
+    }, [weekStart, confirmed]);
 
     if (loading) {
         return <p className="text-xs text-gray-500 mt-2">Loading week...</p>;

@@ -2,14 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import CalendarWeekPreview from "@/components/CalendarWeekPreview";
+import type { AssistantAction, TodaySummary } from "@/types/assistant";
 
 type Message = {
 	role: "user" | "assistant";
 	text: string;
-	action?: any;
+	action?: AssistantAction;
 	confirmed?: boolean;
 	success?: boolean;
-	summary?: any;
+	summary?: TodaySummary;
 };
 
 export default function AssistantPage() {
@@ -47,7 +48,7 @@ export default function AssistantPage() {
 		setLoading(false);
 	}
 
-	async function handleConfirm(action: any, index: number) {
+	async function handleConfirm(action: AssistantAction, index: number) {
 		setConfirmingIndex(index);
 
 		const res = await fetch("/api/assistant", {
@@ -116,7 +117,7 @@ export default function AssistantPage() {
 								{msg.summary.events.length > 0 && (
 									<div>
 										<p className="text-xs font-semibold text-gray-500 mb-1">Events</p>
-										{msg.summary.events.map((e: any, idx: number) => (
+										{msg.summary.events.map((e, idx) => (
 											<p key={idx} className="text-sm">
 												{e.time
 													? new Date(e.time).toLocaleTimeString("en-GB", {
@@ -132,7 +133,7 @@ export default function AssistantPage() {
 								{msg.summary.tasks.length > 0 && (
 									<div>
 										<p className="text-xs font-semibold text-gray-500 mb-1">Open tasks</p>
-										{msg.summary.tasks.map((t: any, idx: number) => (
+										{msg.summary.tasks.map((t, idx) => (
 											<p key={idx} className="text-sm">
 												{t.title}
 											</p>
@@ -171,7 +172,7 @@ export default function AssistantPage() {
 										</p>
 									</div>
 								) : (
-									msg.action.datetime && (
+									"datetime" in msg.action && msg.action.datetime && (
 										<p className="text-xs text-gray-500">
 											{new Date(msg.action.datetime).toLocaleString("en-GB")}
 										</p>
@@ -195,7 +196,7 @@ export default function AssistantPage() {
 								{!msg.confirmed && (
 									<div className="flex gap-2 mt-2">
 										<button
-											onClick={() => handleConfirm(msg.action, i)}
+											onClick={() => msg.action && handleConfirm(msg.action, i)}
 											disabled={confirmingIndex === i}
 											className={`text-xs text-white px-3 py-1 rounded disabled:opacity-50 ${
 												isDestructive(msg.action.type) ? "bg-red-600" : "bg-gray-900"
