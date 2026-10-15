@@ -144,6 +144,9 @@ python generate_dataset.py
 python verify_dataset.py
 python prepare_data.py
 python train.py
+
+# score against hand-written sentences the model never saw (test_set.json)
+python evaluate.py
 ```
 
 ### 3. Run both servers

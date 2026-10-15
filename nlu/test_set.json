@@ -1,0 +1,15 @@
+[
+  { "text": "i've got the orthodontist on thursday at 4", "intent": "add_event", "title": "the orthodontist", "date": "on thursday at 4" },
+  { "text": "lunch with jamie friday 1pm", "intent": "add_event", "title": "lunch with jamie", "date": "friday 1pm" },
+  { "text": "can you remind me to return the library books by monday", "intent": "add_task", "title": "return the library books", "date": "by monday" },
+  { "text": "need to sort out car insurance", "intent": "add_task", "title": "sort out car insurance", "date": null },
+  { "text": "push lunch with jamie to next wednesday", "intent": "update_event", "title": "lunch with jamie", "date": "next wednesday" },
+  { "text": "can we do the orthodontist at 5 instead", "intent": "update_event", "title": "the orthodontist", "date": "at 5" },
+  { "text": "car insurance is sorted", "intent": "complete_task", "title": "car insurance", "date": null },
+  { "text": "tick off return the library books", "intent": "complete_task", "title": "return the library books", "date": null },
+  { "text": "i don't need to do car insurance anymore", "intent": "delete_task", "title": "car insurance", "date": null },
+  { "text": "lunch with jamie is off", "intent": "delete_event", "title": "lunch with jamie", "date": null },
+  { "text": "what's happening today", "intent": "list_today", "title": null, "date": null },
+  { "text": "am i busy today", "intent": "list_today", "title": null, "date": null },
+  { "text": "who won the football last night", "intent": "unknown", "title": null, "date": null }
+]
